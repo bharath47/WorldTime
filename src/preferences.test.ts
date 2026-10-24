@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cities, searchCities } from './cities';
 import { defaults, parsePreferences } from './preferences';
+import { formatTime, offsetLabel } from './time';
 
 describe('saved preferences', () => {
   it('provides sensible first-run defaults', () => {
@@ -40,6 +41,20 @@ describe('offline city search', () => {
     expect(searchCities('New Zealand', []).some(city => city.id === 'auckland')).toBe(true);
     expect(searchCities('Asia/Kathmandu', [])[0].name).toBe('Kathmandu');
     expect(searchCities('Bangalore', [])[0].id).toBe('bengaluru');
+  });
+  it.each(['Dallas', 'Fort Worth', 'Houston'])('finds %s independently of other Central Time cities', name => {
+    const [city] = searchCities(`  ${name.toUpperCase()} `, ['chicago', 'austin']);
+    expect(city).toMatchObject({ name, country: 'United States', zone: 'America/Chicago' });
+    expect(searchCities(name, [city.id])).toEqual([]);
+  });
+  it.each([
+    ['2026-01-15T18:00:00Z', '12:00', 'UTC-06'],
+    ['2026-07-15T18:00:00Z', '13:00', 'UTC-05'],
+  ])('uses Dallas Central Time with date-specific DST at %s', (date, time, offset) => {
+    const [dallas] = searchCities('Dallas', []);
+    const instant = Date.parse(date);
+    expect(formatTime(instant, dallas.zone, false)).toBe(time);
+    expect(offsetLabel(instant, dallas.zone)).toBe(offset);
   });
   it('does not offer duplicates and bounds results', () => {
     expect(searchCities('tokyo', ['tokyo'])).toEqual([]);

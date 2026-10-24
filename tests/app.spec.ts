@@ -54,6 +54,22 @@ test('searches offline with the keyboard and saves format, city order, and highl
   await expect(page.getByTestId('clock-kathmandu')).toContainText('18:45');
 });
 
+test('finds Dallas offline and restores it as the home base', async ({ page }) => {
+  await open(page);
+  await page.context().setOffline(true);
+  const search = page.getByRole('combobox', { name: 'Search cities or time zones' });
+  await search.fill('Dallas');
+  await search.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Dallas', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '24 hr', exact: true }).click();
+  await expect(page.getByTestId('clock-dallas')).toContainText('08:00');
+  await page.getByRole('button', { name: 'Make Dallas home base' }).click();
+  await page.context().setOffline(false);
+  await page.reload();
+  await expect(page.locator('.city-card').first()).toHaveAttribute('aria-label', 'Dallas clock');
+  await expect(page.getByTestId('clock-dallas')).toContainText('08:00');
+});
+
 test('renders 23 and 25 hour DST days and synchronizes every selected row', async ({ page }) => {
   await open(page);
   await expect(page.locator('.hour-header')).toHaveCount(23);
